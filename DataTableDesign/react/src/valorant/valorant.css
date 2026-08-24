@@ -106,3 +106,349 @@ body {
   .val-stats { width: 100%; }
   .val-stats > div { flex: 1 1 33%; }
 }
+
+/* ---------------------------------------------------------------------------
+   Welcome, loading and the controls added when the page gained a search box.
+
+   Same rule as the rest of this file: nothing here may style the component.
+   Modernist throughout — radius 0, 2px structural borders, flat, navy as the
+   one accent and red kept for the negative reading.
+   --------------------------------------------------------------------------- */
+
+/* Shared controls ----------------------------------------------------------- */
+
+.val-input {
+  font: inherit;
+  font-size: 14px;
+  color: #201e1d;                                   /* --ink */
+  background: #ffffff;
+  border: 2px solid #201e1d;
+  border-radius: 0;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.val-input--lg {
+  font-size: 20px;
+  font-weight: 600;
+  padding: 12px 14px;
+  letter-spacing: -0.01em;
+}
+
+/* 2px inset rather than an outline ring: the frame is already 2px, so the
+   focused state thickens what is there instead of adding a second edge. */
+.val-input:focus-visible,
+.val-btn:focus-visible,
+.val-recent:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #1d2d46;              /* navy accent */
+  border-color: #1d2d46;
+}
+
+.val-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.val-field--grow { flex: 1 1 260px; }
+
+.val-field > span {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7d7979;                                   /* --n600 */
+}
+
+.val-btn {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 10px 18px;
+  border: 2px solid #201e1d;
+  border-radius: 0;
+  background: #eae9e9;                              /* --surface */
+  color: #201e1d;
+  cursor: pointer;
+}
+
+.val-btn:hover { background: #d7d3d3; }             /* --n300 */
+
+.val-btn--primary {
+  background: #1d2d46;
+  border-color: #1d2d46;
+  color: #f3f2f2;
+  padding: 12px 26px;
+  font-size: 14px;
+}
+
+.val-btn--primary:hover { background: #142033; }
+
+.val-btn--ghost {
+  background: transparent;
+  padding: 7px 12px;
+  font-size: 12px;
+}
+
+.val-btn--danger { color: #ec3013; }                /* --dt-danger */
+
+.val-error {
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #ec3013;
+  background: #fdece9;
+  border: 2px solid #ec3013;
+}
+
+/* Welcome ------------------------------------------------------------------- */
+
+.val-welcome {
+  max-width: 860px;
+  margin: 0 auto;
+  padding-top: 32px;
+}
+
+.val-welcome__head h1 {
+  margin: 0;
+  font-size: 42px;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+}
+
+.val-welcome__head p {
+  margin: 14px 0 0;
+  max-width: 62ch;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #7d7979;
+}
+
+.val-search {
+  margin: 32px 0 0;
+  padding: 24px;
+  background: #eae9e9;
+  border: 2px solid #201e1d;
+}
+
+.val-search__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+/* Recents ------------------------------------------------------------------- */
+
+.val-recents { margin: 44px 0 0; }
+
+.val-recents h2 {
+  margin: 0 0 14px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7d7979;
+}
+
+.val-recents ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 2px solid #201e1d;
+}
+
+.val-recents li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 0;
+  background: #eae9e9;
+  border-bottom: 2px solid #201e1d;
+}
+
+.val-recents li:last-child { border-bottom: 0; }
+
+.val-recent {
+  flex: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  font: inherit;
+  text-align: left;
+  padding: 14px 16px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+.val-recent:hover { background: #d7d3d3; }
+
+.val-recent__name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.val-recent__meta {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #7d7979;
+}
+
+.val-recent__actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.val-empty {
+  margin: 0;
+  padding: 18px;
+  font-size: 13px;
+  color: #7d7979;
+  background: #eae9e9;
+  border: 2px dashed #bab6b6;                       /* --n400 */
+}
+
+/* Loading ------------------------------------------------------------------- */
+
+.val-loading {
+  min-height: 70vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.val-loading__card {
+  width: 100%;
+  max-width: 560px;
+  padding: 32px;
+  background: #eae9e9;
+  border: 2px solid #201e1d;
+}
+
+.val-loading__kicker {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7d7979;
+}
+
+.val-loading__card h1 {
+  margin: 6px 0 24px;
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.val-bar {
+  height: 18px;
+  background: #ffffff;
+  border: 2px solid #201e1d;
+  overflow: hidden;
+}
+
+.val-bar__fill {
+  height: 100%;
+  background: #1d2d46;
+  /* Long enough to glide between the server's ~0.4s ticks, short enough that
+     the jump when a page lands still reads as progress. */
+  transition: width 420ms linear;
+}
+
+.val-loading__line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin: 10px 0 0;
+  font-size: 13px;
+}
+
+.val-loading__label { font-weight: 600; }
+
+.val-loading__pct {
+  font-variant-numeric: tabular-nums;
+  color: #7d7979;
+}
+
+.val-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 22px 0 0;
+  padding: 0;
+  list-style: none;
+  border: 2px solid #201e1d;
+}
+
+.val-steps li {
+  flex: 1 1 0;
+  padding: 8px 10px;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #7d7979;
+  background: #ffffff;
+  border-right: 2px solid #201e1d;
+}
+
+.val-steps li:last-child { border-right: 0; }
+
+.val-steps li.is-done {
+  background: #1d2d46;
+  color: #f3f2f2;
+}
+
+.val-loading__note {
+  margin: 22px 0 24px;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #7d7979;
+}
+
+/* Table screen additions ---------------------------------------------------- */
+
+.val-back {
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #7d7979;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.val-back:hover { color: #1d2d46; }
+
+/* Back link on the left, re-scrape on the right, on one line above the
+   profile header. */
+.val-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin: 0 0 12px;
+}
+
+@media (max-width: 720px) {
+  .val-welcome { padding-top: 8px; }
+  .val-welcome__head h1 { font-size: 32px; }
+  .val-search { padding: 18px; }
+  .val-search__row { gap: 12px; }
+  .val-field, .val-btn--primary { width: 100%; }
+  .val-recents li { flex-wrap: wrap; padding-bottom: 10px; }
+  .val-loading__card { padding: 22px; }
+}

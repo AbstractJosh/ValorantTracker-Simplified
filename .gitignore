@@ -117,3 +117,6 @@ scrapling/.scrapling_dependencies_installed
 # build rules above are bare names, so `lib` matches at any depth and would
 # swallow the React library source — re-include it.
 !DataTableDesign/react/src/lib/
+
+# scrape cache written by server.py; seeded from matches.json on first run
+profiles/

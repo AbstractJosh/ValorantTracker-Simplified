@@ -32,6 +32,22 @@ function copyFontFolder(): Plugin {
 }
 
 export default defineConfig({
+  // valorant.html talks to server.py at the repo root. Proxying keeps the page
+  // same-origin with the API, so the server needs no CORS header — and without
+  // one, another site the browser has open cannot make this machine scrape.
+  server: {
+    proxy: {
+      '/api': {
+        target: 'http://127.0.0.1:8787',
+        changeOrigin: true,
+        // Scrapes are server-sent events that idle for a minute while
+        // Cloudflare is solved; the proxy must not buffer or time them out.
+        timeout: 0,
+        proxyTimeout: 0,
+      },
+    },
+  },
+
   plugins: [
     react(),
     dts({

@@ -1,86 +1,124 @@
 /**
- * Akemsss#7421's scraped competitive matches, in the Records data table.
+ * Three screens, one at a time: search → scrape → table.
  *
- * Data comes from `matches.json`, written by `scrape_tracker.py` at the repo
- * root. Nothing here fetches — the scrape is a separate step, so the page
- * renders the same rows every time regardless of Cloudflare's mood.
+ * The profile lives in `location.hash`, so a reload or a shared link comes back
+ * to the same table instead of the search box. That also makes the browser's
+ * back button work as the way out of a profile, which is what people reach for.
  */
-import { useMemo, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { DataTable } from '../lib/DataTable'
-import type { DataTableRecord } from '../lib/types'
-import matches from './matches.json'
+import { getProfile, scrapeProfile, type Progress, type ProfileRecord } from './api'
 import { applyValorantLabels } from './labels'
-import { summarise, toRecords, type ValorantMatch } from './mapping'
+import Loading from './Loading'
+import MatchTable from './MatchTable'
+import Welcome, { type Query } from './Welcome'
 
 applyValorantLabels()
 
-const MATCHES = matches as ValorantMatch[]
+type View =
+  | { kind: 'welcome'; error?: string | null }
+  | { kind: 'loading'; player: string }
+  | { kind: 'table'; profile: ProfileRecord }
+
+const slugify = (player: string) =>
+  player
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 
 export default function App() {
-  const [records, setRecords] = useState<DataTableRecord[]>(() => toRecords(MATCHES))
-  const stats = useMemo(() => summarise(MATCHES), [])
+  const [view, setView] = useState<View>({ kind: 'welcome' })
+  const [progress, setProgress] = useState<Progress | null>(null)
+  // The in-flight scrape, so a second search or a hash change can drop the
+  // first one's EventSource instead of leaving it open and reconnecting.
+  const active = useRef<{ cancel: () => void } | null>(null)
 
-  return (
-    <div className="val-page">
-      <header className="val-head">
-        <div className="val-head__id">
-          <h1>Akemsss#7421</h1>
-          <p>
-            Valorant · Competitive · {stats.from} to {stats.to} · scraped from tracker.gg
-          </p>
-        </div>
-        <dl className="val-stats">
-          <div>
-            <dt>Matches</dt>
-            <dd>{stats.played}</dd>
-          </div>
-          <div>
-            <dt>Record</dt>
-            <dd>
-              <span className="val-w">{stats.wins}W</span>
-              <span className="val-sep">/</span>
-              <span className="val-l">{stats.losses}L</span>
-              {stats.draws > 0 && (
-                <>
-                  <span className="val-sep">/</span>
-                  <span>{stats.draws}D</span>
-                </>
-              )}
-            </dd>
-          </div>
-          <div>
-            <dt>Win rate</dt>
-            <dd>{stats.winRate}%</dd>
-          </div>
-          <div>
-            <dt>Avg ACS</dt>
-            <dd>{stats.avgAcs}</dd>
-          </div>
-          <div>
-            <dt>K / D / A</dt>
-            <dd>
-              {stats.kills} / {stats.deaths} / {stats.assists}
-            </dd>
-          </div>
-          <div>
-            <dt>K/D</dt>
-            <dd>{stats.kd}</dd>
-          </div>
-        </dl>
-      </header>
+  const search = useCallback(({ player, playlist, since, refresh }: Query) => {
+    active.current?.cancel()
+    setProgress(null)
+    setView({ kind: 'loading', player })
 
-      <DataTable
-        records={records}
-        onRecordsChange={setRecords}
-        rowsPerPage={15}
-        // The flow block reads a dragged run of ACS cells three ways; `mean` is
-        // the average combat score for whatever is selected.
-        metrics={{ number: ['mean', 'highest', 'sum'] }}
-        title="Match history"
-        kicker={`${stats.played} competitive matches`}
-        logoSrc={null}
+    const run = scrapeProfile({
+      player,
+      playlist,
+      since,
+      refresh,
+      onProgress: setProgress,
+    })
+    active.current = run
+
+    run.promise
+      .then((profile) => {
+        if (active.current !== run) return // superseded by a newer search
+        setView({ kind: 'table', profile })
+        // replace, not push: the loading screen should not be a back target.
+        window.history.replaceState(null, '', `#${slugify(player)}`)
+      })
+      .catch((err: Error) => {
+        if (active.current !== run) return
+        setView({ kind: 'welcome', error: err.message })
+        window.history.replaceState(null, '', window.location.pathname)
+      })
+  }, [])
+
+  const goHome = useCallback(() => {
+    active.current?.cancel()
+    active.current = null
+    setView({ kind: 'welcome' })
+    window.history.pushState(null, '', window.location.pathname)
+  }, [])
+
+  // Open whatever the hash names, on load and on every back/forward.
+  useEffect(() => {
+    const open = () => {
+      const slug = window.location.hash.replace(/^#/, '')
+      if (!slug) {
+        active.current?.cancel()
+        active.current = null
+        setView({ kind: 'welcome' })
+        return
+      }
+      getProfile(slug)
+        .then((profile) => setView({ kind: 'table', profile }))
+        // A hash for a profile that is not cached is not worth an error screen;
+        // the search box with nothing selected is the honest fallback.
+        .catch(() => {
+          setView({ kind: 'welcome' })
+          window.history.replaceState(null, '', window.location.pathname)
+        })
+    }
+    open()
+    window.addEventListener('hashchange', open)
+    window.addEventListener('popstate', open)
+    return () => {
+      window.removeEventListener('hashchange', open)
+      window.removeEventListener('popstate', open)
+    }
+  }, [])
+
+  // Never leave a scrape's EventSource open behind an unmount.
+  useEffect(() => () => active.current?.cancel(), [])
+
+  if (view.kind === 'loading') {
+    return <Loading player={view.player} progress={progress} onCancel={goHome} />
+  }
+
+  if (view.kind === 'table') {
+    return (
+      <MatchTable
+        profile={view.profile}
+        onBack={goHome}
+        onRefresh={() =>
+          search({
+            player: view.profile.player,
+            playlist: view.profile.playlist as Query['playlist'],
+            since: view.profile.since,
+            refresh: true,
+          })
+        }
       />
-    </div>
-  )
+    )
+  }
+
+  return <Welcome onSearch={search} initialError={view.error} />
 }

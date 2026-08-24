@@ -17,7 +17,9 @@ Usage:
 import argparse
 import json
 import sys
+from datetime import date
 from pathlib import Path
+from urllib.parse import quote
 
 from scrapling.fetchers import StealthyFetcher
 
@@ -32,71 +34,156 @@ DEFAULT_SINCE = "2026-07-18"
 PROFILE_URL = "https://tracker.gg/valorant/profile/riot/{player}/matches?platform=pc&playlist={playlist}"
 API_URL = "https://api.tracker.gg/api/v2/valorant/standard/matches/riot/{player}?platform=pc&type={playlist}"
 
-# Walks the `next` cursor until a page's oldest match predates the cutoff.
-# Trimmed to the fields used here so a long history stays a small payload.
-PAGINATE_JS = """
-async ({api, cutoff, maxPages}) => {
-  const matches = [], log = [];
-  let next = null;
-  for (let i = 0; i < maxPages; i++) {
-    const url = api + (next === null ? '' : '&next=' + next);
-    const r = await fetch(url, {credentials: 'include', headers: {'Accept': 'application/json'}});
-    if (!r.ok) { log.push('page ' + i + ': HTTP ' + r.status); break; }
-    const d = await r.json();
-    const page = (d.data && d.data.matches) || [];
-    if (!page.length) { log.push('page ' + i + ': empty'); break; }
-
-    for (const m of page) {
-      const seg = (m.segments || []).find((s) => s.type === 'overview');
-      if (!seg) continue;
-      const st = seg.stats || {}, md = seg.metadata || {}, mm = m.metadata || {};
-      const v = (k) => (st[k] ? st[k].value : null);
-      // Rank carries no value/displayValue — the tier is only in its metadata.
-      const tier = (st.rank && st.rank.metadata && st.rank.metadata.tierName) || null;
-      matches.push({
-        id: m.attributes && m.attributes.id,
-        timestamp: mm.timestamp,
-        map: mm.mapName,
-        mode: mm.modeName,
-        season: mm.seasonName,
-        agent: md.agentName,
-        won: md.hasWon,
-        result: mm.result,
-        kills: v('kills'), deaths: v('deaths'), assists: v('assists'),
-        acs: v('scorePerRound'),
-        kd: v('kdRatio'),
-        roundsWon: v('roundsWon'), roundsLost: v('roundsLost'),
-        hs: v('headshotsPercentage'),
-        placement: v('placement'),
-        rank: tier,
-        trn: v('trnPerformanceScore'),
-      });
-    }
-    const oldest = page[page.length - 1].metadata.timestamp;
-    log.push('page ' + i + ': ' + page.length + ' matches, oldest ' + oldest);
-    if (oldest < cutoff) { log.push('reached cutoff'); break; }
-    const nx = d.data.metadata && d.data.metadata.next;
-    if (nx === undefined || nx === null) { log.push('no further cursor'); break; }
-    next = nx;
+# Fetches ONE page of the match feed and returns it trimmed to the fields used
+# here, so a long history stays a small payload.
+#
+# The `next`-cursor loop lives in Python rather than in here. Keeping it in the
+# page meant a single evaluate() that returned nothing until the whole history
+# had been walked, and the only way to report progress out of it was
+# page.expose_function — which fails on an already-loaded page: the JS-side
+# wrapper is installed as an init script for *new* documents, so window[name]
+# resolves to Playwright's raw binding and rejects an object argument with
+# "Invalid arguments: should be exactly one string". One evaluate per page
+# reports naturally, and puts the cutoff logic somewhere it can be read.
+FETCH_PAGE_JS = """
+async ({api, next}) => {
+  const url = api + (next === null ? '' : '&next=' + next);
+  const r = await fetch(url, {credentials: 'include', headers: {'Accept': 'application/json'}});
+  if (!r.ok) return {ok: false, status: r.status};
+  const d = await r.json();
+  const page = (d.data && d.data.matches) || [];
+  const matches = [];
+  for (const m of page) {
+    const seg = (m.segments || []).find((s) => s.type === 'overview');
+    if (!seg) continue;
+    const st = seg.stats || {}, md = seg.metadata || {}, mm = m.metadata || {};
+    const v = (k) => (st[k] ? st[k].value : null);
+    // Rank carries no value/displayValue — the tier is only in its metadata.
+    const tier = (st.rank && st.rank.metadata && st.rank.metadata.tierName) || null;
+    matches.push({
+      id: m.attributes && m.attributes.id,
+      timestamp: mm.timestamp,
+      map: mm.mapName,
+      mode: mm.modeName,
+      season: mm.seasonName,
+      agent: md.agentName,
+      won: md.hasWon,
+      result: mm.result,
+      kills: v('kills'), deaths: v('deaths'), assists: v('assists'),
+      acs: v('scorePerRound'),
+      kd: v('kdRatio'),
+      roundsWon: v('roundsWon'), roundsLost: v('roundsLost'),
+      hs: v('headshotsPercentage'),
+      placement: v('placement'),
+      rank: tier,
+      trn: v('trnPerformanceScore'),
+    });
   }
-  return {matches, log};
+  const meta = d.data && d.data.metadata;
+  return {
+    ok: true,
+    count: page.length,
+    matches: matches,
+    newest: page.length ? page[0].metadata.timestamp : null,
+    oldest: page.length ? page[page.length - 1].metadata.timestamp : null,
+    next: (meta && meta.next !== undefined && meta.next !== null) ? meta.next : null,
+  };
 }
 """
 
 
-def scrape(player, playlist, since, max_pages, verbose):
-    quoted = player.replace("#", "%23")
+def _covered(newest, oldest, since):
+    """How much of the requested window has been walked, as 0..1.
+
+    Whole days are enough for a progress bar, and comparing dates sidesteps the
+    naive/aware mismatch between the API's offset-carrying timestamps and the
+    plain `since` date.
+    """
+    if not newest or not oldest:
+        return 0.0
+    try:
+        top = date.fromisoformat(newest[:10])
+        bottom = date.fromisoformat(oldest[:10])
+        floor = date.fromisoformat(since)
+    except ValueError:
+        return 0.0
+    span = (top - floor).days
+    if span <= 0:
+        return 1.0
+    return max(0.0, min(1.0, (top - bottom).days / span))
+
+
+class ScrapeError(RuntimeError):
+    """A scrape that failed for a reportable reason, rather than a bug."""
+
+
+def scrape(player, playlist, since, max_pages, verbose, on_progress=None):
+    """Return the raw match dicts for one profile.
+
+    `on_progress(phase, detail)` is called as the scrape moves through its
+    stages, so a caller with a UI can show something truthful while the browser
+    works. It is optional and never affects the result. Phases:
+
+        browser     the fetcher is starting Patchright
+        paginate    the page is up and API pages are landing; `detail` carries
+                    `covered`, the fraction of the requested date window walked
+        parsing     pagination finished, rows are being shaped
+
+    Everything before `paginate` is opaque by nature: Cloudflare is solved
+    inside `StealthyFetcher.fetch`, which does not call back.
+    """
+    emit = on_progress or (lambda phase, detail=None: None)
+
+    # Encodes the "#" as %23 like the old hand-rolled replace did, and also
+    # the spaces a Riot game name is allowed to contain.
+    quoted = quote(player, safe="")
     api = API_URL.format(player=quoted, playlist=playlist)
     profile = PROFILE_URL.format(player=quoted, playlist=playlist)
     captured = {}
 
+    cutoff = since + "T00:00:00"
+
     def paginate(page):
-        captured["result"] = page.evaluate(
-            PAGINATE_JS, {"api": api, "cutoff": since + "T00:00:00", "maxPages": max_pages}
-        )
+        """Walk the `next` cursor, one evaluate() per page, until the cutoff."""
+        matches, log = [], []
+        cursor, newest = None, None
+
+        for i in range(max_pages):
+            res = page.evaluate(FETCH_PAGE_JS, {"api": api, "next": cursor}) or {}
+            if not res.get("ok"):
+                log.append("page {}: HTTP {}".format(i, res.get("status")))
+                break
+            if not res.get("count"):
+                log.append("page {}: empty".format(i))
+                break
+
+            matches.extend(res.get("matches") or [])
+            oldest = res.get("oldest")
+            newest = newest or res.get("newest")
+            log.append("page {}: {} matches, oldest {}".format(i, res["count"], oldest))
+            emit(
+                "paginate",
+                {
+                    "page": i,
+                    "matches": len(matches),
+                    "oldest": oldest,
+                    "covered": _covered(newest, oldest, since),
+                },
+            )
+
+            if oldest and oldest < cutoff:
+                log.append("reached cutoff")
+                break
+            if res.get("next") is None:
+                log.append("no further cursor")
+                break
+            cursor = res["next"]
+
+        captured["result"] = {"matches": matches, "log": log}
         return page
 
     print("Loading " + profile, file=sys.stderr)
+    emit("browser", {"url": profile})
     response = StealthyFetcher.fetch(
         profile,
         headless=True,
@@ -107,12 +194,13 @@ def scrape(player, playlist, since, max_pages, verbose):
         page_action=paginate,
     )
     if response.status != 200:
-        sys.exit("Profile page failed with status " + str(response.status))
+        raise ScrapeError("Profile page failed with status " + str(response.status))
 
     out = captured.get("result") or {}
     if verbose:
         for line in out.get("log", []):
             print("  " + line, file=sys.stderr)
+    emit("parsing", {"matches": len(out.get("matches", []))})
     return out.get("matches", [])
 
 
@@ -187,7 +275,10 @@ def main():
     ap.add_argument("-q", "--quiet", action="store_true")
     args = ap.parse_args()
 
-    raw = scrape(args.player, args.playlist, args.since, args.max_pages, not args.quiet)
+    try:
+        raw = scrape(args.player, args.playlist, args.since, args.max_pages, not args.quiet)
+    except ScrapeError as exc:
+        sys.exit(str(exc))
     if not raw:
         sys.exit("No matches returned — the API shape has probably changed.")
 

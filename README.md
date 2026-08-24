@@ -1,18 +1,22 @@
 # Valorant tracker.gg scrape → Records data table
 
-Scrapes a tracker.gg Valorant profile with [Scrapling](https://github.com/D4Vinci/Scrapling)
-and renders the matches in the React data table from
+Search any tracker.gg Valorant profile by Riot ID, watch it scrape with
+[Scrapling](https://github.com/D4Vinci/Scrapling), and read the matches in the
+React data table from
 [DataTableDesign](https://github.com/AbstractJosh/DataTableDesign).
 
-Profile: `Akemsss#7421`, competitive. Current pull: **132 matches, 18 July –
-23 August 2026**.
+Three screens: a search box, a progress bar while the browser works, then the
+table. Every profile scraped is cached on disk, so going back to one is a click.
 
 ## Run it
 
-`matches.json` is committed, and the copy the table reads is identical to it, so
-seeing the table takes one command:
+Two processes — the scrape API and the dev server:
 
 ```bash
+# terminal 1 — the scrape API on :8787
+./.venv/Scripts/python.exe server.py
+
+# terminal 2 — the page on :5180
 cd DataTableDesign/react && npx vite --port 5180
 ```
 
@@ -20,27 +24,32 @@ Then open **http://localhost:5180/valorant.html**. `/` on its own serves the
 component's generic demo table, not this one — the two entries are separate
 HTML files (`index.html` → `src/demo`, `valorant.html` → `src/valorant`).
 
+`Akemsss#7421` ships already scraped in `profiles/`, so it is on the welcome
+screen from the first run with no waiting. Anything else takes two to three
+minutes the first time.
+
+Vite proxies `/api` to the server, which is why the page and the API are
+same-origin and the server sets no CORS header — without the proxy the page
+cannot reach it, and with CORS instead, any site the browser had open could make
+this machine scrape.
+
 Vite binds IPv6 first here, so `localhost` and `[::1]` work but `127.0.0.1`
-does not. Use `--host 127.0.0.1` if you need the IPv4 address.
+does not. Use `--host 127.0.0.1` if you need the IPv4 address. If 5180 is
+already taken Vite silently steps to the next free port, so take the number
+from its startup line rather than assuming it.
 
-If 5180 is already taken Vite silently steps to the next free port, so take the
-number from its startup line rather than assuming it.
+### The CLI still works
 
-### Re-scraping
-
-Only needed to pull fresh matches:
+`scrape_tracker.py` is unchanged as a one-shot scraper, and is what `server.py`
+calls into:
 
 ```bash
 PYTHONIOENCODING=utf-8 ./.venv/Scripts/python.exe scrape_tracker.py --since 2026-07-18
-cp matches.json DataTableDesign/react/src/valorant/matches.json
 ```
 
-This drives a real Patchright browser through Cloudflare, so give it a minute or
-two. The copy step is manual on purpose: the scraper writes to the repo root and
-the table reads its own copy, so the two only sync when you say so.
-
-`PYTHONIOENCODING=utf-8` only matters for the console — without it Windows
-renders non-ASCII output as `?`. The scraped data is correct either way.
+It writes `matches.json` at the repo root and prints a summary. `PYTHONIOENCODING=utf-8`
+only matters for the console — without it Windows renders non-ASCII output as
+`?`. The scraped data is correct either way.
 
 ### From a fresh clone
 
@@ -61,6 +70,40 @@ python -m venv .venv
 from PyPI. Paths here are Windows (`.venv/Scripts/`); elsewhere it is
 `.venv/bin/`.
 
+## The server
+
+`server.py` is a small Starlette app — Starlette and uvicorn arrive with
+Scrapling's `ai` extra, so it adds no dependency.
+
+| Route | |
+|---|---|
+| `GET /api/scrape?player=&playlist=&since=&refresh=` | SSE: progress events, then `done` with the matches |
+| `GET /api/profiles` | everything cached, newest first |
+| `GET /api/profile/{slug}` | one cached profile |
+| `DELETE /api/profile/{slug}` | drop it |
+
+Results land in `profiles/<name-tag>.json`. A cached scrape is reused only when
+it reaches at least as far back as the window being asked for now, so widening
+`since` re-scrapes but narrowing it does not.
+
+Only one scrape runs at a time. The lock is taken by the request handler and
+released by the worker thread, not the handler — closing the tab mid-scrape
+cancels the SSE generator, and a lock released there would free the slot while
+Patchright still had a browser open.
+
+### What the progress bar means
+
+The pagination stretch is real: the scraper knows the newest match, the cutoff
+date, and how far back it has walked, so 74–95% is a measurement. Everything
+before it is not — Cloudflare is solved inside `StealthyFetcher.fetch`, which
+does not report — so that stretch eases along an elapsed-time curve toward 72%
+and never arrives. The label always names the actual phase, so the bar reads as
+pacing rather than a claim.
+
+The split is lopsided because the work is: on this machine Cloudflare takes
+about 170 seconds and paginating the whole history takes about 3. An even split
+left the bar apparently stuck at 38% for three minutes.
+
 ## The scrape
 
 `scrape_tracker.py` reads tracker.gg's **JSON API**, not the rendered rows. The
@@ -70,10 +113,10 @@ unrounded stats.
 
 The browser still makes the request. `StealthyFetcher` (Scrapling's Patchright
 backend) loads the profile page with `solve_cloudflare=True`, and `page_action`
-then runs a `fetch()` loop *inside* that page, so every API call carries its
-cookies and referer. `block_ads=True` keeps ~3,500 ad domains out of the way.
+then runs `fetch()` *inside* that page, so every API call carries its cookies
+and referer. `block_ads=True` keeps ~3,500 ad domains out of the way.
 
-Two findings that shape the query:
+Three findings that shape the query:
 
 - **Drop the `season` parameter.** Filtering by season stops at that act's first
   match — `V26: A5` only reaches 19 August (33 matches). The unfiltered feed
@@ -82,6 +125,14 @@ Two findings that shape the query:
   `&next=N`. The loop stops when a page's oldest match predates the cutoff, so
   the last page is fetched whole and then filtered — no matches are lost at the
   boundary.
+- **The cursor loop belongs in Python, not in the page.** It started as one
+  `evaluate()` that walked the whole history and returned at the end, which
+  reports nothing while it runs. The obvious fix — `page.expose_function` — does
+  not work here: the JS-side wrapper is installed as an init script for *new*
+  documents, so on an already-loaded page `window[name]` is Playwright's raw
+  binding and rejects an object with `Invalid arguments: should be exactly one
+  string`. One `evaluate()` per page reports naturally and puts the cutoff logic
+  where it can be read.
 
 Per match it reads agent, map, result, round score, K/D/A, ACS, K/D ratio,
 headshot %, tracker score, rank and scoreboard placement. Rank is the one field
@@ -100,7 +151,6 @@ kept here because they apply to anyone scraping these pages:
   any text.
 - The agent icon's URL is percent-encoded, so `img[src*='/agents/']` never
   matches — key on `displayicon` instead.
-
 ## The table
 
 The component's `DataTableRecord` is a closed six-column schema threaded through
@@ -130,25 +180,33 @@ to `localeCompare` for everything else, and only ISO sorts correctly there.
 ## Layout
 
 ```
-scrape_tracker.py                          the scraper
-matches.json                               its output (132 matches)
+scrape_tracker.py                          the scraper, also usable as a CLI
+server.py                                  Starlette API the page talks to
+matches.json                               the CLI's output (132 matches)
+profiles/                                  the scrape cache, one file per profile
+  └── akemsss-7421.json                    committed, so the app has data on first run
 CLAUDE.md                                  notes on the Scrapling codebase (gitignored)
 scrapling/                                 Scrapling v0.4.15 (cloned)
 .venv/                                     python 3.10 + scrapling[all] + chromium (gitignored)
 DataTableDesign/react/src/valorant/        the app built on their component
-  ├── App.tsx      page: profile header + <DataTable>
-  ├── mapping.ts   ValorantMatch -> DataTableRecord
-  ├── labels.ts    renames columns/statuses in both languages
-  ├── valorant.css page frame (Modernist: radius 0, 2px borders, flat)
-  └── matches.json copy of the scrape
+  ├── App.tsx        the three screens, and the hash that names the open profile
+  ├── Welcome.tsx    search box + everything already scraped
+  ├── Loading.tsx    progress bar, phase label, clock
+  ├── MatchTable.tsx profile header + <DataTable>
+  ├── api.ts         the scrape API client
+  ├── mapping.ts     ValorantMatch -> DataTableRecord
+  ├── labels.ts      renames columns/statuses in both languages
+  └── valorant.css   page frame (Modernist: radius 0, 2px borders, flat)
 DataTableDesign/react/valorant.html        vite entry
 DataTableDesign/react/node_modules/        installed by npm (gitignored)
 ```
+
+The open profile lives in `location.hash`, so a reload or a shared link comes
+back to the same table and the browser's back button leaves it.
 
 `DataTableDesign/` is a copy of [AbstractJosh/DataTableDesign](https://github.com/AbstractJosh/DataTableDesign)
 vendored into this repo as plain files, not a submodule — edits here do not
 reach that repo, and vice versa.
 
-Nothing under `DataTableDesign/react/src/lib/` was modified; `npm test` there
-passes 358/359, the one failure being a pre-existing jsdom focus quirk in an
-export test, present before these files were added.
+Nothing under `DataTableDesign/react/src/lib/` was modified; `npx vitest run`
+there passes all 359 tests.
