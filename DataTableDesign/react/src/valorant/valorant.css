@@ -1,0 +1,108 @@
+/* ---------------------------------------------------------------------------
+   The PAGE frame for the Valorant match history.
+
+   Same rule as src/demo/demo.css: nothing here may style the component.
+   Anything scoped to .dt-root belongs in src/lib/DataTable.css.
+
+   Follows the Modernist system the table is built on — radius 0 everywhere,
+   2px structural borders, flat (no gradients, bevels or shadows), navy
+   #1d2d46 as accent with red reserved for the negative reading.
+   --------------------------------------------------------------------------- */
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; padding: 0; }
+
+body {
+  min-height: 100vh;
+  background: #f3f2f2;                              /* --ground */
+  color: #201e1d;                                   /* --ink    */
+  font-family: 'Archivo', system-ui, sans-serif;
+  padding: 40px 48px 64px;
+}
+
+::selection { background: #d7d3d3; }                /* --n300 */
+
+/* ---------------------------------------------------------------------------
+   Profile header: who the rows belong to, and the totals across all 20.
+
+   The table's own header bar states the screen; this states the player, so it
+   sits above and reads as page furniture rather than a second toolbar.
+   --------------------------------------------------------------------------- */
+
+.val-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 24px 40px;
+  margin: 0 0 28px;
+  padding: 0 0 20px;
+  border-bottom: 2px solid #201e1d;                 /* structural: 2px, flat */
+}
+
+.val-head__id h1 {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+.val-head__id p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: #7d7979;                                   /* --n600 */
+}
+
+/* Totals strip -------------------------------------------------------------- */
+
+.val-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0;
+  margin: 0;
+  /* One shared 2px frame; each cell draws only its right edge so the run reads
+     as a single ruled band rather than six boxes. */
+  border: 2px solid #201e1d;
+}
+
+.val-stats > div {
+  padding: 10px 18px;
+  border-right: 2px solid #201e1d;
+  background: #eae9e9;                              /* --surface */
+}
+
+.val-stats > div:last-child { border-right: 0; }
+
+.val-stats dt {
+  margin: 0 0 3px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #7d7979;                                   /* --n600 */
+}
+
+.val-stats dd {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* Win green and loss red are the table's own pill colours, reused so the strip
+   and the Result column agree. */
+.val-w   { color: #2f7d4f; }                        /* --dt-success */
+.val-l   { color: #ec3013; }                        /* --dt-danger, negative only */
+.val-sep { color: #bab6b6; margin: 0 4px; }         /* --n400 */
+
+@media (max-width: 720px) {
+  body { padding: 24px 20px 48px; }
+  .val-stats { width: 100%; }
+  .val-stats > div { flex: 1 1 33%; }
+}

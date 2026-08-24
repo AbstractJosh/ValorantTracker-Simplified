@@ -109,3 +109,11 @@ output/*/index.html
 docs/_build
 public/
 web/
+
+# local scrapling install marker
+scrapling/.scrapling_dependencies_installed
+
+# DataTableDesign is a vendored copy of AbstractJosh/DataTableDesign. The Python
+# build rules above are bare names, so `lib` matches at any depth and would
+# swallow the React library source — re-include it.
+!DataTableDesign/react/src/lib/
