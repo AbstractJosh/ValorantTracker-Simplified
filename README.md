@@ -9,21 +9,57 @@ Profile: `Akemsss#7421`, competitive. Current pull: **132 matches, 18 July –
 
 ## Run it
 
-```bash
-# 1. Scrape (writes matches.json)
-PYTHONIOENCODING=utf-8 ./.venv/Scripts/python.exe scrape_tracker.py --since 2026-07-18
+`matches.json` is committed, and the copy the table reads is identical to it, so
+seeing the table takes one command:
 
-# 2. Feed the table and serve it
-cp matches.json DataTableDesign/react/src/valorant/matches.json
+```bash
 cd DataTableDesign/react && npx vite --port 5180
-# then open http://localhost:5180/valorant.html
 ```
+
+Then open **http://localhost:5180/valorant.html**. `/` on its own serves the
+component's generic demo table, not this one — the two entries are separate
+HTML files (`index.html` → `src/demo`, `valorant.html` → `src/valorant`).
+
+Vite binds IPv6 first here, so `localhost` and `[::1]` work but `127.0.0.1`
+does not. Use `--host 127.0.0.1` if you need the IPv4 address.
+
+If 5180 is already taken Vite silently steps to the next free port, so take the
+number from its startup line rather than assuming it.
+
+### Re-scraping
+
+Only needed to pull fresh matches:
+
+```bash
+PYTHONIOENCODING=utf-8 ./.venv/Scripts/python.exe scrape_tracker.py --since 2026-07-18
+cp matches.json DataTableDesign/react/src/valorant/matches.json
+```
+
+This drives a real Patchright browser through Cloudflare, so give it a minute or
+two. The copy step is manual on purpose: the scraper writes to the repo root and
+the table reads its own copy, so the two only sync when you say so.
 
 `PYTHONIOENCODING=utf-8` only matters for the console — without it Windows
 renders non-ASCII output as `?`. The scraped data is correct either way.
 
-Vite binds IPv6 first here, so `localhost` and `[::1]` work but `127.0.0.1`
-does not. Use `--host 127.0.0.1` if you need the IPv4 address.
+### From a fresh clone
+
+Neither `node_modules/` nor `.venv/` is in the repo, so both halves need
+installing once:
+
+```bash
+# the table
+cd DataTableDesign/react && npm install
+
+# the scraper — python 3.10+, from the repo root
+python -m venv .venv
+./.venv/Scripts/python.exe -m pip install -e ".[all]"
+./.venv/Scripts/scrapling.exe install       # downloads the browser binaries
+```
+
+`pip install -e .` installs the Scrapling checkout in this repo, not the release
+from PyPI. Paths here are Windows (`.venv/Scripts/`); elsewhere it is
+`.venv/bin/`.
 
 ## The scrape
 
@@ -96,9 +132,9 @@ to `localeCompare` for everything else, and only ISO sorts correctly there.
 ```
 scrape_tracker.py                          the scraper
 matches.json                               its output (132 matches)
-CLAUDE.md                                  notes on the Scrapling codebase
+CLAUDE.md                                  notes on the Scrapling codebase (gitignored)
 scrapling/                                 Scrapling v0.4.15 (cloned)
-.venv/                                     python 3.10 + scrapling[all] + chromium
+.venv/                                     python 3.10 + scrapling[all] + chromium (gitignored)
 DataTableDesign/react/src/valorant/        the app built on their component
   ├── App.tsx      page: profile header + <DataTable>
   ├── mapping.ts   ValorantMatch -> DataTableRecord
@@ -106,7 +142,12 @@ DataTableDesign/react/src/valorant/        the app built on their component
   ├── valorant.css page frame (Modernist: radius 0, 2px borders, flat)
   └── matches.json copy of the scrape
 DataTableDesign/react/valorant.html        vite entry
+DataTableDesign/react/node_modules/        installed by npm (gitignored)
 ```
+
+`DataTableDesign/` is a copy of [AbstractJosh/DataTableDesign](https://github.com/AbstractJosh/DataTableDesign)
+vendored into this repo as plain files, not a submodule — edits here do not
+reach that repo, and vice versa.
 
 Nothing under `DataTableDesign/react/src/lib/` was modified; `npm test` there
 passes 358/359, the one failure being a pre-existing jsdom focus quirk in an
