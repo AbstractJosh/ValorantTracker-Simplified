@@ -452,3 +452,33 @@ body {
   .val-recents li { flex-wrap: wrap; padding-bottom: 10px; }
   .val-loading__card { padding: 22px; }
 }
+
+/* Act picker ---------------------------------------------------------------- */
+
+/* Restates the chosen period as a date, because "Act 5" alone does not say
+   when that was, and the dropdown only shows one option at a time. */
+.val-since-note {
+  margin: 14px 0 0;
+  font-size: 12px;
+  color: #7d7979;                                   /* --n600 */
+}
+
+/* A button that reads as a link: it changes what the form shows rather than
+   submitting anything, so it should not carry a button's weight. */
+.val-linkish {
+  font: inherit;
+  font-size: 12px;
+  color: #1d2d46;                                   /* navy accent */
+  background: none;
+  border: 0;
+  padding: 0;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.val-linkish:hover { color: #ec3013; }              /* --dt-danger, link hover */
+
+/* The act dropdown carries more text than the playlist one, so it needs a
+   little more room - but not so much that it pushes the submit button onto a
+   line of its own. */
+.val-field--wide { flex: 0 1 210px; }

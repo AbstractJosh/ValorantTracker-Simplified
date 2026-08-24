@@ -65,9 +65,14 @@ paths are `.venv/bin/` instead of `.venv/Scripts/`.
 
 ### Search any player
 
-Enter a Riot ID, pick a playlist, and choose how far back to look. Players
-you've already looked up are listed underneath — one click reopens them with no
-waiting, and there are **Refresh** and **Forget** buttons for each.
+Enter a Riot ID, pick a playlist, and choose how far back to look. **Since** is
+a list of Valorant acts rather than a calendar — "V26 · Act 5", "Episode 9 ·
+Act 3" — because that is how a season of play is actually bounded. It opens on
+the act in progress, and there is still a plain date field behind *Pick a date
+instead* if you want one.
+
+Players you've already looked up are listed underneath — one click reopens them
+with no waiting, and there are **Refresh** and **Forget** buttons for each.
 
 ### Watch it work
 
@@ -128,6 +133,8 @@ It writes `matches.json` and prints a summary.
 start.bat                            starts both halves and opens the app
 server.py                            the scrape API the page talks to
 scrape_tracker.py                    the scraper itself
+fetch_seasons.py                     refreshes the act list when a new act opens
+seasons.json                         act names and start dates, for the Since list
 matches.json                         a saved scrape, used to seed the app
 profiles/                            saved players (created as you go)
 DataTableDesign/                     the table, from a separate project

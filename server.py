@@ -42,6 +42,7 @@ from scrape_tracker import DEFAULT_PLAYER, DEFAULT_SINCE, ScrapeError, normalise
 
 ROOT = Path(__file__).parent
 CACHE = ROOT / "profiles"
+SEASONS = ROOT / "seasons.json"
 DEFAULT_WINDOW_DAYS = 90
 MAX_PAGES = 60
 
@@ -264,6 +265,25 @@ async def list_profiles(request):
     return JSONResponse(out)
 
 
+async def list_seasons(request):
+    """The acts the "Since" dropdown offers, newest first.
+
+    Filtered to acts that have actually begun. seasons.json is generated ahead
+    of time by fetch_seasons.py and lists future acts too - V26 Act 6 opens
+    2026-10-14 - and offering one of those would guarantee an empty scrape.
+    Filtering here rather than in the file means the list stays correct as time
+    passes, without regenerating anything.
+    """
+    try:
+        rows = json.loads(SEASONS.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        # The page falls back to a plain date field when this comes back empty.
+        print("No season list available: " + repr(exc), file=sys.stderr)
+        return JSONResponse([])
+    today = date.today().isoformat()
+    return JSONResponse([s for s in rows if (s.get("start") or "9999") <= today])
+
+
 async def get_profile(request):
     path = CACHE / (slugify(request.path_params["slug"]) + ".json")
     if not path.exists():
@@ -323,6 +343,7 @@ app = Starlette(
     routes=[
         Route("/api/scrape", scrape_stream),
         Route("/api/profiles", list_profiles),
+        Route("/api/seasons", list_seasons),
         Route("/api/profile/{slug}", get_profile),
         Route("/api/profile/{slug}", delete_profile, methods=["DELETE"]),
     ]

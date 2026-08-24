@@ -1,0 +1,275 @@
+[
+  {
+    "label": "V26 · Act 6",
+    "episode": "V26",
+    "act": 6,
+    "start": "2026-10-14",
+    "end": "2027-01-06"
+  },
+  {
+    "label": "V26 · Act 5",
+    "episode": "V26",
+    "act": 5,
+    "start": "2026-08-19",
+    "end": "2026-10-14"
+  },
+  {
+    "label": "V26 · Act 4",
+    "episode": "V26",
+    "act": 4,
+    "start": "2026-06-24",
+    "end": "2026-08-19"
+  },
+  {
+    "label": "V26 · Act 3",
+    "episode": "V26",
+    "act": 3,
+    "start": "2026-04-29",
+    "end": "2026-06-24"
+  },
+  {
+    "label": "V26 · Act 2",
+    "episode": "V26",
+    "act": 2,
+    "start": "2026-03-18",
+    "end": "2026-04-29"
+  },
+  {
+    "label": "V26 · Act 1",
+    "episode": "V26",
+    "act": 1,
+    "start": "2026-01-07",
+    "end": "2026-03-18"
+  },
+  {
+    "label": "V25 · Act 6",
+    "episode": "V25",
+    "act": 6,
+    "start": "2025-10-15",
+    "end": "2026-01-07"
+  },
+  {
+    "label": "V25 · Act 5",
+    "episode": "V25",
+    "act": 5,
+    "start": "2025-08-20",
+    "end": "2025-10-15"
+  },
+  {
+    "label": "V25 · Act 4",
+    "episode": "V25",
+    "act": 4,
+    "start": "2025-06-25",
+    "end": "2025-08-20"
+  },
+  {
+    "label": "V25 · Act 3",
+    "episode": "V25",
+    "act": 3,
+    "start": "2025-04-30",
+    "end": "2025-06-25"
+  },
+  {
+    "label": "V25 · Act 2",
+    "episode": "V25",
+    "act": 2,
+    "start": "2025-03-05",
+    "end": "2025-04-30"
+  },
+  {
+    "label": "V25 · Act 1",
+    "episode": "V25",
+    "act": 1,
+    "start": "2025-01-08",
+    "end": "2025-03-05"
+  },
+  {
+    "label": "Episode 9 · Act 3",
+    "episode": "Episode 9",
+    "act": 3,
+    "start": "2024-10-23",
+    "end": "2025-01-08"
+  },
+  {
+    "label": "Episode 9 · Act 2",
+    "episode": "Episode 9",
+    "act": 2,
+    "start": "2024-08-28",
+    "end": "2024-10-23"
+  },
+  {
+    "label": "Episode 9 · Act 1",
+    "episode": "Episode 9",
+    "act": 1,
+    "start": "2024-06-26",
+    "end": "2024-08-28"
+  },
+  {
+    "label": "Episode 8 · Act 3",
+    "episode": "Episode 8",
+    "act": 3,
+    "start": "2024-04-30",
+    "end": "2024-06-26"
+  },
+  {
+    "label": "Episode 8 · Act 2",
+    "episode": "Episode 8",
+    "act": 2,
+    "start": "2024-03-05",
+    "end": "2024-04-30"
+  },
+  {
+    "label": "Episode 8 · Act 1",
+    "episode": "Episode 8",
+    "act": 1,
+    "start": "2024-01-09",
+    "end": "2024-03-05"
+  },
+  {
+    "label": "Episode 7 · Act 3",
+    "episode": "Episode 7",
+    "act": 3,
+    "start": "2023-10-31",
+    "end": "2024-01-09"
+  },
+  {
+    "label": "Episode 7 · Act 2",
+    "episode": "Episode 7",
+    "act": 2,
+    "start": "2023-08-29",
+    "end": "2023-10-31"
+  },
+  {
+    "label": "Episode 7 · Act 1",
+    "episode": "Episode 7",
+    "act": 1,
+    "start": "2023-06-27",
+    "end": "2023-08-29"
+  },
+  {
+    "label": "Episode 6 · Act 3",
+    "episode": "Episode 6",
+    "act": 3,
+    "start": "2023-04-25",
+    "end": "2023-06-27"
+  },
+  {
+    "label": "Episode 6 · Act 2",
+    "episode": "Episode 6",
+    "act": 2,
+    "start": "2023-03-07",
+    "end": "2023-04-25"
+  },
+  {
+    "label": "Episode 6 · Act 1",
+    "episode": "Episode 6",
+    "act": 1,
+    "start": "2023-01-10",
+    "end": "2023-03-07"
+  },
+  {
+    "label": "Episode 5 · Act 3",
+    "episode": "Episode 5",
+    "act": 3,
+    "start": "2022-10-18",
+    "end": "2023-01-10"
+  },
+  {
+    "label": "Episode 5 · Act 2",
+    "episode": "Episode 5",
+    "act": 2,
+    "start": "2022-08-23",
+    "end": "2022-10-18"
+  },
+  {
+    "label": "Episode 5 · Act 1",
+    "episode": "Episode 5",
+    "act": 1,
+    "start": "2022-06-21",
+    "end": "2022-08-23"
+  },
+  {
+    "label": "Episode 4 · Act 3",
+    "episode": "Episode 4",
+    "act": 3,
+    "start": "2022-04-26",
+    "end": "2022-06-21"
+  },
+  {
+    "label": "Episode 4 · Act 2",
+    "episode": "Episode 4",
+    "act": 2,
+    "start": "2022-03-01",
+    "end": "2022-04-26"
+  },
+  {
+    "label": "Episode 4 · Act 1",
+    "episode": "Episode 4",
+    "act": 1,
+    "start": "2022-01-11",
+    "end": "2022-03-01"
+  },
+  {
+    "label": "Episode 3 · Act 3",
+    "episode": "Episode 3",
+    "act": 3,
+    "start": "2021-11-02",
+    "end": "2022-01-11"
+  },
+  {
+    "label": "Episode 3 · Act 2",
+    "episode": "Episode 3",
+    "act": 2,
+    "start": "2021-09-08",
+    "end": "2021-11-02"
+  },
+  {
+    "label": "Episode 3 · Act 1",
+    "episode": "Episode 3",
+    "act": 1,
+    "start": "2021-06-22",
+    "end": "2021-09-08"
+  },
+  {
+    "label": "Episode 2 · Act 3",
+    "episode": "Episode 2",
+    "act": 3,
+    "start": "2021-04-27",
+    "end": "2021-06-22"
+  },
+  {
+    "label": "Episode 2 · Act 2",
+    "episode": "Episode 2",
+    "act": 2,
+    "start": "2021-03-02",
+    "end": "2021-04-27"
+  },
+  {
+    "label": "Episode 2 · Act 1",
+    "episode": "Episode 2",
+    "act": 1,
+    "start": "2021-01-12",
+    "end": "2021-03-02"
+  },
+  {
+    "label": "Episode 1 · Act 3",
+    "episode": "Episode 1",
+    "act": 3,
+    "start": "2020-10-13",
+    "end": "2021-01-12"
+  },
+  {
+    "label": "Episode 1 · Act 2",
+    "episode": "Episode 1",
+    "act": 2,
+    "start": "2020-08-04",
+    "end": "2020-10-13"
+  },
+  {
+    "label": "Episode 1 · Act 1",
+    "episode": "Episode 1",
+    "act": 1,
+    "start": "2020-06-01",
+    "end": "2020-08-04"
+  }
+]

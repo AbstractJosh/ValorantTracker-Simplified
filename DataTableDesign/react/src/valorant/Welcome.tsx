@@ -5,17 +5,52 @@
  * listed underneath — those open instantly from the server's cache, which is
  * the difference between a click and another minute of Cloudflare.
  */
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
-import { PLAYLISTS, deleteProfile, listProfiles, type Playlist, type ProfileSummary } from './api'
+import {
+  PLAYLISTS,
+  deleteProfile,
+  listProfiles,
+  listSeasons,
+  type Playlist,
+  type ProfileSummary,
+  type Season,
+} from './api'
 
 const WINDOW_DAYS = 90
 
-/** Same default the server applies when `since` is omitted. */
+/** The fallback the server also applies when `since` is omitted. */
 export function defaultSince(): string {
   const d = new Date()
   d.setDate(d.getDate() - WINDOW_DAYS)
   return d.toISOString().slice(0, 10)
+}
+
+/** Sentinel for the option that swaps the dropdown out for a date field. */
+const CUSTOM = 'custom'
+
+const readableDate = (iso: string) =>
+  new Date(iso + 'T00:00:00').toLocaleDateString(undefined, {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  })
+
+/**
+ * Acts grouped under their episode, order preserved.
+ *
+ * The list arrives newest-first and episodes are contiguous within it, so this
+ * only has to start a new group when the episode name changes - no sorting,
+ * which would fight the ordering the server already chose.
+ */
+function byEpisode(seasons: Season[]): Array<{ episode: string; acts: Season[] }> {
+  const groups: Array<{ episode: string; acts: Season[] }> = []
+  for (const season of seasons) {
+    const last = groups[groups.length - 1]
+    if (last && last.episode === season.episode) last.acts.push(season)
+    else groups.push({ episode: season.episode, acts: [season] })
+  }
+  return groups
 }
 
 export interface Query {
@@ -37,12 +72,33 @@ export default function Welcome({
   const [since, setSince] = useState(defaultSince)
   const [error, setError] = useState<string | null>(initialError ?? null)
   const [recents, setRecents] = useState<ProfileSummary[]>([])
+  const [seasons, setSeasons] = useState<Season[]>([])
+  // Starts true so the date field is what shows if the act list never arrives;
+  // loading a non-empty list is what switches the dropdown on.
+  const [custom, setCustom] = useState(true)
 
   useEffect(() => {
     listProfiles()
       .then(setRecents)
       .catch(() => setRecents([]))
   }, [])
+
+  useEffect(() => {
+    listSeasons()
+      .then((rows) => {
+        if (!rows.length) return
+        setSeasons(rows)
+        setCustom(false)
+        // The act in progress is the useful default: it answers "how am I doing
+        // this act", which is the question a rank-tracking page is usually
+        // opened to answer.
+        setSince(rows[0].start)
+      })
+      .catch(() => setSeasons([]))
+  }, [])
+
+  const groups = useMemo(() => byEpisode(seasons), [seasons])
+  const current = seasons[0]
 
   function submit(event: React.FormEvent) {
     event.preventDefault()
@@ -103,21 +159,77 @@ export default function Welcome({
             </select>
           </label>
 
-          <label className="val-field">
+          <label className={custom ? 'val-field' : 'val-field val-field--wide'}>
             <span>Since</span>
-            <input
-              className="val-input"
-              type="date"
-              value={since}
-              max={new Date().toISOString().slice(0, 10)}
-              onChange={(e) => setSince(e.target.value)}
-            />
+            {custom ? (
+              <input
+                className="val-input"
+                type="date"
+                value={since}
+                max={new Date().toISOString().slice(0, 10)}
+                onChange={(e) => setSince(e.target.value)}
+                aria-label="Start date"
+              />
+            ) : (
+              <select
+                className="val-input"
+                value={since}
+                onChange={(e) => {
+                  if (e.target.value === CUSTOM) setCustom(true)
+                  else setSince(e.target.value)
+                }}
+                aria-label="Start of the period to scrape"
+              >
+                {groups.map((group) => (
+                  <optgroup key={group.episode} label={group.episode}>
+                    {group.acts.map((act) => (
+                      /* The episode is repeated in every option rather than
+                         left to the optgroup: a closed <select> shows only the
+                         option's own text, so "Act 5" alone would not say which
+                         episode it belongs to. The date is not repeated here -
+                         it would make the closed control very wide, and the
+                         line under the form already states it. */
+                      <option key={act.start} value={act.start}>
+                        {act.label}
+                        {act === current ? ' · current' : ''}
+                      </option>
+                    ))}
+                  </optgroup>
+                ))}
+                <option value={CUSTOM}>Pick a date instead…</option>
+              </select>
+            )}
           </label>
 
           <button className="val-btn val-btn--primary" type="submit">
             Look up
           </button>
         </div>
+
+        <p className="val-since-note">
+          {custom ? (
+            <>
+              Scraping matches from {readableDate(since)} onwards.
+              {seasons.length > 0 && (
+                <>
+                  {' '}
+                  <button
+                    type="button"
+                    className="val-linkish"
+                    onClick={() => {
+                      setCustom(false)
+                      setSince(seasons[0].start)
+                    }}
+                  >
+                    Choose an act instead
+                  </button>
+                </>
+              )}
+            </>
+          ) : (
+            <>Scraping matches from {readableDate(since)} onwards.</>
+          )}
+        </p>
 
         {error && (
           <p className="val-error" role="alert">

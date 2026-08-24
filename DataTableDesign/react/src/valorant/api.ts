@@ -26,6 +26,17 @@ export interface ProfileRecord {
   matches: ValorantMatch[]
 }
 
+/** One Valorant act, as offered by the "Since" dropdown. */
+export interface Season {
+  /** "V26 · Act 5" - matches how the game and tracker.gg name it. */
+  label: string
+  episode: string
+  act: number
+  /** YYYY-MM-DD, the date the act opened. */
+  start: string
+  end: string
+}
+
 export interface Progress {
   phase: 'waiting' | 'browser' | 'paginate' | 'parsing' | 'cache' | 'done'
   pct: number
@@ -42,6 +53,9 @@ async function json<T>(res: Response): Promise<T> {
 }
 
 export const listProfiles = () => fetch('/api/profiles').then(json<ProfileSummary[]>)
+
+/** Acts that have already started, newest first. Empty if the list is missing. */
+export const listSeasons = () => fetch('/api/seasons').then(json<Season[]>)
 
 export const getProfile = (slug: string) =>
   fetch(`/api/profile/${encodeURIComponent(slug)}`).then(json<ProfileRecord>)
