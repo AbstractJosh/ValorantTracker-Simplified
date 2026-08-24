@@ -10,28 +10,39 @@ saved, so going back to one is instant.
 
 ## Run it
 
-You need two things running — the scraper and the web page.
+**Double-click `start.bat`.**
 
-**1. Start the scraper** (first terminal):
+It starts both halves, waits until they answer, and opens the app in your
+browser. Two windows appear - one for the scraper, one for the page. Closing
+them stops the app.
+
+If something is missing or a port is taken it says so and starts nothing,
+rather than half-starting and leaving you to guess.
+
+`Akemsss#7421` is included already scraped, so there is something to look at
+straight away.
+
+<details>
+<summary>Starting it by hand instead (or on macOS / Linux)</summary>
+
+Two terminals:
 
 ```bash
+# 1 - the scraper
 ./.venv/Scripts/python.exe server.py
-```
 
-**2. Start the page** (second terminal):
-
-```bash
+# 2 - the page
 cd DataTableDesign/react
 npx vite --port 5180
 ```
 
-**3. Open** http://localhost:5180/valorant.html
+Then open http://localhost:5180/valorant.html - `/valorant.html`, not just `/`,
+which shows a generic demo table instead of this app.
 
-> Open `/valorant.html`, not just `/` — the bare address shows a generic demo
-> table instead of this app.
+To use different ports, set `VT_SERVER_PORT` and `VT_PAGE_PORT`. `start.bat`,
+the Vite proxy and the server all read them, so the three stay in agreement.
 
-`Akemsss#7421` is included already scraped, so there is something to look at
-straight away.
+</details>
 
 ### First time only
 
@@ -97,7 +108,7 @@ highest and total. There's an English/Turkish switch beside the title.
 |---|---|
 | "Cannot reach the scrape server" | The first terminal isn't running. Start `server.py`. |
 | "That is not a Riot ID" | It needs the tag: `Name#TAG`, e.g. `Akemsss#7421`. |
-| Port 5180 busy | Vite quietly picks the next free port — use the one it prints. |
+| "Port 5180 is already in use" | Something else is on it - often a dev server left running. Close it, or set `VT_PAGE_PORT` to another port. |
 | `127.0.0.1` doesn't load | Use `localhost`. Add `--host 127.0.0.1` if you need the IP. |
 | `ERROR: No Cloudflare challenge found` | Not an error. It means there was nothing to solve. |
 
@@ -114,6 +125,7 @@ It writes `matches.json` and prints a summary.
 ## What's in here
 
 ```
+start.bat                            starts both halves and opens the app
 server.py                            the scrape API the page talks to
 scrape_tracker.py                    the scraper itself
 matches.json                         a saved scrape, used to seed the app

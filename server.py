@@ -21,6 +21,7 @@ open drive a scrape on this machine.
 """
 
 import json
+import os
 import queue
 import re
 import sys
@@ -328,4 +329,7 @@ app = Starlette(
 )
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8787, log_level="info")
+    # start.bat and vite.config.ts read the same variable, so moving the API
+    # off 8787 keeps the launcher, the proxy and the server agreeing.
+    port = int(os.environ.get("VT_SERVER_PORT") or 8787)
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")

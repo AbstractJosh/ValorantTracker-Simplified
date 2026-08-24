@@ -38,7 +38,8 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8787',
+        // start.bat can move the API off 8787; follow it so the two agree.
+        target: `http://127.0.0.1:${process.env.VT_SERVER_PORT || '8787'}`,
         changeOrigin: true,
         // Scrapes are server-sent events that idle for a minute while
         // Cloudflare is solved; the proxy must not buffer or time them out.
